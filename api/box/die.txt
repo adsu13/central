@@ -3672,3 +3672,10 @@ Stack trace:
   thrown in <b>C:\xampp\htdocs\0auth.php</b> on line <b>18</b><br />
 
 #Reprovada 4984070001076723|10|2028|907 » () Autorizacao Negada -> R$ 10,85
+[DIE] 4984070001076723|10|2028|907 » () Autorizacao Negada -> R$ 10,42
+[DIE] 4984070001076723|10|2028|907 » () Autorizacao Negada -> R$ 18,99
+[DIE] 4984070001076723|10|2028|907 » () Autorizacao Negada -> R$ 15,15
+[DIE] 4984070001076723|10|2028|907 » () Autorizacao Negada -> R$ 10,37
+[DIE] 4984070001076723|10|2028|907 » () Autorizacao Negada -> R$ 10,43
+[DIE] 4984070001076723|10|2028|907 » () Autorizacao Negada -> R$ 11,58
+[DIE] 4984070001076723|10|2028|907 » () Autorizacao Negada -> R$ 18,71
