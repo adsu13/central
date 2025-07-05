@@ -10,8 +10,6 @@ function App() {
     <>
       <UserProvider>
         <Routes />
-        <GlobalStyle />
-        <ToastContainer theme="dark" />
       </UserProvider>
     </>
   );
