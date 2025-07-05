@@ -29,7 +29,6 @@ export const Container = styled.div`
 
   b {
     margin: 4px;
-    color: #186fef;
   }
 
   input {
