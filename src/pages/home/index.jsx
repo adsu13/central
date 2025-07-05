@@ -12,6 +12,7 @@ import Auth from "@src/functions/auth";
 import Button from "react-bootstrap/esm/Button";
 import { useUser } from "../../context/userContext";
 
+
 import { RiShutDownLine } from "react-icons/ri";
 import { FaUserSecret } from "react-icons/fa";
 import { IoEllipsisVerticalOutline } from "react-icons/io5";
@@ -20,9 +21,6 @@ import { GiCash } from "react-icons/gi";
 import { useNavigate } from "react-router-dom";
 import Spinner from "react-bootstrap/esm/Spinner";
 import { toast } from "react-toastify";
-
-import { Container, RawCC, Welcome } from "./styles";
-
 function Home() {
   const { user, token, updateUser, updateToken } = useUser();
   const navigate = useNavigate();
@@ -99,126 +97,128 @@ function Home() {
   };
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+    navigate("/login");
+    return;
+  }
 
-    const config = {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    };
+  const config = {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+  };
 
-    api.get("/api/users/user", config).then((response) => {
+  api.get("/api/users/user", config)
+    .then((response) => {
       updateUser(response.data);
+    })
+    .catch((err) => {
+      console.error("Token inválido ou API fora:", err.message);
+      // Remove o token e redireciona
+      localStorage.removeItem("token");
+      updateToken(false);
+      navigate("/login");
     });
 
     api.get("/api/gateways/allgateways", config).then((response) => {
       setGateways(response.data);
     });
   }, [user.balance, token, loading]);
+ return (
+  <div style={{
+    minHeight: "100vh",
+    background: "linear-gradient(to right, #000000, #1a1a1a, #000000)",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: "1rem"
+  }}>
+    <div style={{
+      backgroundColor: "#181818",
+      color: "white",
+      borderRadius: "0.5rem",
+      boxShadow: "0 0 20px rgba(0,0,0,0.5)",
+      width: "100%",
+      maxWidth: "600px",
+      padding: "1.5rem"
+    }}>
+      <h2 style={{ fontSize: "1.25rem", fontWeight: "bold", marginBottom: "0.5rem" }}>
+        Olá <span style={{ fontWeight: "bold" }}>{user?.nickname || "Admin"}</span>, você possui <span style={{ color: "limegreen" }}>{user?.balance || 0}</span> Crédito(s).
+      </h2>
+      <p style={{ color: "limegreen", marginBottom: "1rem" }}>Conectado ✔</p>
 
-  return (
-    <Container>
-      <Auth />
-      <Form data-bs-theme="dark" onSubmit={handleGate}>
-        <Welcome>
-          <img src="./logo.png" alt="logo" />
-          <div>
-            <FaUserSecret />
-            <b>
-              {user.nickname == undefined ? (
-                <Spinner animation="border" variant="primary" />
-              ) : (
-                user.nickname
-              )}
-            </b>
-            <IoEllipsisVerticalOutline />
-            <GiCash />
-            <b>
-              {user.balance == undefined ? (
-                <Spinner animation="border" variant="primary" />
-              ) : (
-                user.balanceFormated
-              )}
-            </b>
-          </div>
-          <Button onClick={Logout} variant="primary">
-            <RiShutDownLine />
-          </Button>
-        </Welcome>
+      <textarea
+        style={{
+          backgroundColor: "black",
+          color: "white",
+          width: "100%",
+          height: "8rem",
+          borderRadius: "0.5rem",
+          padding: "0.5rem",
+          marginBottom: "1rem",
+          resize: "none",
+          border: "none"
+        }}
+        placeholder="Cole suas CCs aqui..."
+        value={ccs}
+        onChange={(e) => setCcs(e.target.value)}
+      />
 
-        <Form.Control
-          disabled={loading}
-          as="textarea"
-          value={ccs}
-          onChange={(e) => setCcs(e.target.value)}
-          placeholder="CC'S"
-        />
-        <InputGroup className="mb-3">
-          <DropdownButton
-            variant="outline-secondary"
-            title="GATEWAY"
-            id="input-group-dropdown-1"
-          >
-            {gateways.length <= 0 && <Spinner />}
-            {gateways.map((g, index) => (
-              <Dropdown.Item
-                key={index}
-                href="#"
-                onClick={() =>
-                  setSelectedGateway({ name: g.gateway, route: g.route })
-                }
-              >
-                {g.gateway}
-              </Dropdown.Item>
-            ))}
-          </DropdownButton>
-          <Form.Control
-            readOnly
-            defaultValue={selectedGateway.name}
-            aria-label="Text input with dropdown button"
-          />
-          <Button disabled={loading} type="submit">
-            {loading ? (
-              <Spinner
-                as="span"
-                animation="border"
-                size="sm"
-                role="status"
-                aria-hidden="true"
-              />
-            ) : (
-              "Iniciar"
-            )}
-          </Button>
-        </InputGroup>
-      </Form>
-      <Accordion data-bs-theme="dark" defaultActiveKey={["0"]} alwaysOpen>
-        <Accordion.Item eventKey="0">
-          <Accordion.Header className="approved">
-            Aprovadas {approved.length}
-          </Accordion.Header>
-          <Accordion.Body>
-            <RawCC
-              contentEditable
-              dangerouslySetInnerHTML={{ __html: approved.join(" ") }}
-            />
-          </Accordion.Body>
-        </Accordion.Item>
-        <Accordion.Item eventKey="1">
-          <Accordion.Header className="rejected">
-            Reprovadas {rejected.length}
-          </Accordion.Header>
-          <Accordion.Body>
-            <RawCC
-              contentEditable
-              dangerouslySetInnerHTML={{ __html: rejected.join(" ") }}
-            />
-          </Accordion.Body>
-        </Accordion.Item>
-      </Accordion>
-    </Container>
-  );
+      <div style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        backgroundColor: "#0f0f0f",
+        padding: "0.5rem",
+        borderRadius: "0.5rem",
+        marginBottom: "1rem"
+      }}>
+        <select
+          style={{
+            backgroundColor: "#444",
+            color: "white",
+            borderRadius: "0.25rem",
+            padding: "0.25rem 0.5rem",
+            fontSize: "0.75rem",
+            fontWeight: "bold",
+            border: "none"
+          }}
+          onChange={(e) => setSelectedGateway(e.target.value)}
+          value={selectedGateway}
+        >
+          <option value="">Selecione um Gateway</option>
+          {gateways.map((gateway, index) => (
+            <option key={index} value={gateway.gateway}>
+              {gateway.gateway}
+            </option>
+          ))}
+        </select>
+
+          
+      </div>
+
+      <button
+        style={{
+          width: "100%",
+          backgroundColor: "transparent",
+          border: "1px solid white",
+          color: "white",
+          padding: "0.5rem",
+          borderRadius: "0.5rem",
+          cursor: "pointer"
+        }}
+        onClick={handleGate}
+        disabled={loading}
+      >
+        {loading ? <Spinner animation="border" size="sm" /> : "Iniciar"}
+      </button>
+    </div>
+  </div>
+);
+
+
+
 }
 
 export default Home;
