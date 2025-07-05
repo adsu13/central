@@ -8,11 +8,11 @@ export const GlobalStyle = createGlobalStyle`
     width: 100vw;
     min-width: 320px;
     min-height: 100vh;
-    background-image: url("./bg.png");
-    background-repeat: no-repeat;
-    background-size: cover;
+    background: linear-gradient(to right, #000000, #1a1a1a, #000000);
+    backgroundColor: #181818;
     color: rgb(190, 237, 245);
     overflow-x: hidden;
+     align-items: center;
   }
   #root{
     display: flex;

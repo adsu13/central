@@ -58,8 +58,9 @@ function Login() {
 
     <Container>
       <GlobalStyle></GlobalStyle>
+      <img src="./logo.png" alt="logo" />
       <Form data-bs-theme="dark" className="container" onSubmit={handleSumit}>
-        <img src="./logo.png" alt="logo" />
+        
         <InputGroup className="mb-3 mw1">
           <InputGroup.Text id="basic-addon1">
             <MdOutlineKey />

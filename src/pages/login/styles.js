@@ -3,13 +3,16 @@ import styled from "styled-components";
 export const Container = styled.div`
   width: 100%;
   img {
-    width: 300px;
+    width: 650px;
+    height: auto; 
     margin-bottom: 10px;
   }
   form {
     width: 40%;
     min-width: 300px;
     max-width: 400px;
+    flex-grow: 1;        /* Ocupa espaço restante */
+
   }
   .btn-primary {
     display: flex;
