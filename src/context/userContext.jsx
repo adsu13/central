@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
+import api from "@src/services/api"; // adicione essa importação
+
 const UserContext = createContext();
 
 export function UserProvider({ children }) {
@@ -15,26 +17,42 @@ export function UserProvider({ children }) {
   };
 
   const updateUser = (newUser) => {
-    if (newUser != false)
-      newUser['balanceFormated'] = newUser.balance.toLocaleString("pt-BR", {
+    if (newUser !== false) {
+      newUser["balanceFormated"] = newUser.balance.toLocaleString("pt-BR", {
         style: "currency",
         currency: "BRL",
       });
+    }
     setUser(newUser);
   };
 
   const loadToken = () => {
-    let localToken =
-      localStorage.getItem("token") !== null
-        ? localStorage.getItem("token")
-        : false;
+    const localToken = localStorage.getItem("token");
     if (localToken) setToken(localToken);
+  };
+
+  const loadUserData = async () => {
+    if (!token) return;
+
+    try {
+      const res = await api.get("/api/admin/me"); // essa rota deve retornar os dados do usuário atual
+      updateUser(res.data.user);        // ou res.data, dependendo do que sua API retorna
+    } catch (error) {
+      console.error("Erro ao carregar dados do usuário:", error);
+      updateUser(false);
+    }
   };
 
   useEffect(() => {
     loadToken();
-  }, [token, user.token]);
-  
+  }, []);
+
+  useEffect(() => {
+    if (token) {
+      loadUserData(); // quando token muda, buscar dados do usuário
+    }
+  }, [token]);
+
   return (
     <UserContext.Provider
       value={{ token, updateToken, saveToken, user, updateUser }}
@@ -43,6 +61,7 @@ export function UserProvider({ children }) {
     </UserContext.Provider>
   );
 }
+
 export function useUser() {
   return useContext(UserContext);
 }
