@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const functions = require("./src/functions/index");
-
 functions.loadBins();
 
 const app = express();
@@ -47,6 +46,9 @@ db.mongoose
 
 require("./src/routes/gateways.routes")(app);
 require("./src/routes/users.routes")(app);
+const adminRoutes = require("./src/routes/admin.routes");
+app.use("/api/admin", adminRoutes);
+
 
 const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
