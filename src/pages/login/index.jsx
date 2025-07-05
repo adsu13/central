@@ -12,7 +12,7 @@ import { toast } from "react-toastify";
 import api from "@src/services/api";
 import { MdOutlineKey } from "react-icons/md";
 import { CiLogin } from "react-icons/ci";
-
+import { GlobalStyle } from "../../styles/globalStyles";
 import { Container } from "./styles";
 
 function Login() {
@@ -55,7 +55,9 @@ function Login() {
   }, [token, isLoading]);
 
   return (
+
     <Container>
+      <GlobalStyle></GlobalStyle>
       <Form data-bs-theme="dark" className="container" onSubmit={handleSumit}>
         <img src="./logo.png" alt="logo" />
         <InputGroup className="mb-3 mw1">
