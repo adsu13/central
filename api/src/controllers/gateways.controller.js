@@ -30,61 +30,68 @@ exports.gateways = (req, res) => {
 
 exports.gateway = async (req, res) => {
   if (!req.user) {
-    res.status(400).send({ message: "Content can not be empty!" });
-    return;
+    return res.status(400).send({ message: "Content can not be empty!" });
   }
 
-  if (!req.body.gateway) {
-    res.status(400).send({ message: "Content can not be empty!" });
-    return;
+  if (!req.body.gateway || !req.body.lista) {
+    return res.status(400).send({ message: "Content can not be empty!" });
   }
 
-  if (!req.body.lista) {
-    res.status(400).send({ message: "Content can not be empty!" });
-    return;
-  }
+  try {
+    const response = await api.get(`${req.body.gateway.route}?lista=${req.body.lista}`);
+    console.log("Resposta da API:", response.data);
 
-  api
-    .get(`${req.body.gateway.route}?lista=${req.body.lista}`)
-    .then(async (response) => {
-      Users.findOne({ token: req.user.token }, async (err, user) => {
-        let bin;
+    const data = response.data;
+    let card;
 
-        let card = response.data;
-        
-
-        if (response.data.includes("LIVE")) {
-          bin = functions.BinCheck(response.data.slice(10, 16));
-          card = card.replace("SecurityChecker", `${bin} by SecurityChecker`);
-          await functions.Box(card, "live");
-        } else {
-          bin = functions.BinCheck(response.data.slice(11, 16))
-          card = card.replace("SecurityChecker", `${bin} by SecurityChecker`);
-          await functions.Box(card, "die");
-        }
-
-        
-       
-        if (!err) {
-          if (user.balance < Config.payment)
-            return res.status(400).send({ message: "insufficient credits!" });
-
-          if (response.data.includes("Aprovada")) {
-            user.balance = user.balance - 1;
-
-            await user.save();
-
-            res.send({ user: user, cc: card });
-          } else {
-            if (user.balance < Config.payment)
-              return res.status(400).send({ message: "insufficient credits!" });
-            else {
-              res.send({ user: user, cc: card });
-            }
-          }
-        }
+    // Construir a string visível do cartão
+    if (typeof data === "object" && data.cartao && data.mensagem) {
+      card = `${data.status || "?"} - ${data.cartao} - ${data.mensagem}`;
+    } else if (typeof data === "string") {
+      card = data;
+    } else {
+      return res.status(400).send({
+        message: "Unexpected response format from gateway",
+        raw: response.data
       });
-    });
+    }
+
+    const user = await Users.findOne({ token: req.user.token });
+
+    if (!user) {
+      return res.status(404).send({ message: "User not found" });
+    }
+
+    let bin;
+
+    const isLive = card.includes("LIVE") || data.status === "LIVE" || data.status === "Aprovada";
+    const isApproved = card.includes("Aprovada") || data.status === "Aprovada";
+
+    if (isLive) {
+      bin = functions.BinCheck(card.slice(10, 16));
+      card = card.replace("SecurityChecker", `${bin} by SecurityChecker`);
+      await functions.Box(card, "live");
+    } else {
+      bin = functions.BinCheck(card.slice(11, 16));
+      card = card.replace("SecurityChecker", `${bin} by SecurityChecker`);
+      await functions.Box(card, "die");
+    }
+
+    if (user.balance < Config.payment) {
+      return res.status(400).send({ message: "insufficient credits!" });
+    }
+
+    if (isApproved) {
+      user.balance -= 1;
+      await user.save();
+    }
+
+    return res.send({ user, cc: card });
+
+  } catch (error) {
+    console.error("Erro ao consultar gateway:", error);
+    return res.status(500).send({ message: "Erro ao consultar gateway" });
+  }
 };
 exports.createGateway = async (req, res) => {
   if (!req.user) {
