@@ -1,4 +1,3 @@
-// src/pages/adminPanel.jsx
 import React, { useEffect, useState } from "react";
 import api from "@src/services/api";
 import { useUser } from "@src/context/userContext";
@@ -6,16 +5,42 @@ import { useNavigate } from "react-router-dom";
 
 const AdminPanel = () => {
   const navigate = useNavigate();
-
   const { token, user } = useUser();
+
+  // Estados
   const [users, setUsers] = useState([]);
+  const [gateways, setGateways] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [form, setForm] = useState({ nickname: "", balance: 0, admin: false });
+  const [form, setForm] = useState({
+    nickname: "",
+    balance: 0,
+    admin: false,
+    threads: 1
+  });
+  const [gatewayForm, setGatewayForm] = useState({ 
+    gateway: "", 
+    route: "" 
+  });
   const [searchNickname, setSearchNickname] = useState("");
-  const [balanceForm, setBalanceForm] = useState({ targetToken: "", amount: 0 });
+  const [balanceForm, setBalanceForm] = useState({ 
+    targetToken: "", 
+    amount: 0 
+  });
+  const [threadsForm, setThreadsForm] = useState({ 
+    targetToken: "", 
+    threads: 1 
+  });
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
 
+  // Redireciona se não for admin
+  useEffect(() => {
+    if (token && user && !user.admin) {
+      navigate("/", { replace: true });
+    }
+  }, [token, user, navigate]);
+
+  // Busca usuários e gateways
   const fetchUsers = async (nickname = "") => {
     try {
       const res = await api.get("/api/admin/list-users", {
@@ -29,14 +54,28 @@ const AdminPanel = () => {
     }
   };
 
+  const fetchGateways = async () => {
+    try {
+      const res = await api.get("/api/gateways/allgateways");
+      setGateways(res.data);
+    } catch (error) {
+      console.error("Erro ao buscar gateways:", error);
+    }
+  };
+
   useEffect(() => {
-    if (!token) return;
-    fetchUsers();
+    if (token) {
+      fetchUsers();
+      fetchGateways();
+    }
   }, [token]);
 
+  if (!token || !user) return null;
+
+  // Handlers
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({
+    setForm(prev => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,
     }));
@@ -45,14 +84,13 @@ const AdminPanel = () => {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
-      const res = await api.post("/api/admin/create-users", form);
+      await api.post("/api/admin/create-users", form);
       setMessage("Usuário criado com sucesso!");
       setMessageType("success");
-      setForm({ nickname: "", balance: 0, admin: false });
+      setForm({ nickname: "", balance: 0, admin: false, threads: 1 });
       fetchUsers();
     } catch (error) {
-      console.error("Erro ao criar usuário:", error.response?.data || error.message);
-      setMessage("Erro ao criar usuário.");
+      setMessage(error.response?.data?.message || "Erro ao criar usuário");
       setMessageType("error");
     }
   };
@@ -66,8 +104,38 @@ const AdminPanel = () => {
       setBalanceForm({ targetToken: "", amount: 0 });
       fetchUsers();
     } catch (error) {
-      console.error("Erro ao adicionar saldo:", error.response?.data || error.message);
-      setMessage("Erro ao adicionar saldo.");
+      setMessage(error.response?.data?.message || "Erro ao adicionar saldo");
+      setMessageType("error");
+    }
+  };
+
+  const handleUpdateThreads = async (e) => {
+    e.preventDefault();
+    try {
+      await api.put("/api/users/threads", {
+        token: threadsForm.targetToken,
+        threads: threadsForm.threads
+      });
+      setMessage("Threads atualizados com sucesso!");
+      setMessageType("success");
+      setThreadsForm({ targetToken: "", threads: 1 });
+      fetchUsers();
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Erro ao atualizar threads");
+      setMessageType("error");
+    }
+  };
+
+  const handleCreateGateway = async (e) => {
+    e.preventDefault();
+    try {
+      await api.post("/api/gateways/addgateway", gatewayForm);
+      setMessage("Gateway criado com sucesso!");
+      setMessageType("success");
+      setGatewayForm({ gateway: "", route: "" });
+      fetchGateways();
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Erro ao criar gateway");
       setMessageType("error");
     }
   };
@@ -80,44 +148,93 @@ const AdminPanel = () => {
       setMessageType("success");
       fetchUsers();
     } catch (error) {
-      console.error("Erro ao deletar usuário:", error.response?.data || error.message);
-      setMessage("Erro ao deletar usuário.");
+      setMessage(error.response?.data?.message || "Erro ao deletar usuário");
       setMessageType("error");
     }
   };
 
-  const handleSearch = () => {
-    fetchUsers(searchNickname);
+  const handleDeleteGateway = async (gatewayId) => {
+    if (!window.confirm("Tem certeza que deseja deletar este gateway?")) return;
+    try {
+      await api.delete(`/api/gateways/gateway/${gatewayId}`);
+      setMessage("Gateway deletado com sucesso!");
+      setMessageType("success");
+      fetchGateways();
+    } catch (error) {
+      setMessage(error.response?.data?.message || "Erro ao deletar gateway");
+      setMessageType("error");
+    }
   };
 
- if (!token) {
-  return null; // ou redirecione para login
-}
-
-if (!user) {
-  return null; // espera o user carregar
-}
-
-if (!user.admin) {
-  navigate("/", { replace: true });
-  return null;
-}
-
   return (
-    <div
-      style={{
-        padding: 24,
-        fontFamily: 'Arial, sans-serif',
-        background: 'linear-gradient(to right, #000000, #1a1a1a, #000000)',
-        color: 'rgb(190, 237, 245)',
-        minHeight: '100vh',
-      }}
-    >
-      <h2 style={{ marginBottom: 24 }}>🛠️ Painel de Administração</h2>
+    <div style={styles.container}>
+      <h2 style={styles.title}>🛠️ Painel de Administração</h2>
 
-      <section style={{ marginBottom: 32 }}>
+      {/* Seção de Gateways */}
+      <section style={styles.section}>
+        <h3>📡 Gerenciar Gateways</h3>
+        <form onSubmit={handleCreateGateway} style={styles.form}>
+          <input
+            type="text"
+            name="gateway"
+            value={gatewayForm.gateway}
+            placeholder="Nome do Gateway"
+            onChange={(e) => setGatewayForm({ ...gatewayForm, gateway: e.target.value })}
+            required
+            style={styles.input}
+          />
+          <input
+            type="text"
+            name="route"
+            value={gatewayForm.route}
+            placeholder="Rota"
+            onChange={(e) => setGatewayForm({ ...gatewayForm, route: e.target.value })}
+            required
+            style={styles.input}
+          />
+          <button type="submit" style={styles.createButton}>
+            Criar Gateway
+          </button>
+        </form>
+
+        <div style={{ marginTop: 20 }}>
+          <h4>Gateways Existentes</h4>
+          {gateways.length > 0 ? (
+            <table style={styles.table}>
+              <thead>
+                <tr style={styles.tableHeader}>
+                  <th style={styles.th}>Gateway</th>
+                  <th style={styles.th}>Rota</th>
+                  <th style={styles.th}>Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {gateways.map((gateway) => (
+                  <tr key={gateway._id}>
+                    <td style={styles.td}>{gateway.gateway}</td>
+                    <td style={styles.td}>{gateway.route}</td>
+                    <td style={styles.td}>
+                      <button
+                        onClick={() => handleDeleteGateway(gateway._id)}
+                        style={styles.deleteButton}
+                      >
+                        Deletar
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p>Nenhum gateway cadastrado</p>
+          )}
+        </div>
+      </section>
+
+      {/* Seção de Usuários */}
+      <section style={styles.section}>
         <h3>👤 Criar Novo Usuário</h3>
-        <form onSubmit={handleCreateUser} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <form onSubmit={handleCreateUser} style={styles.form}>
           <input
             type="text"
             name="nickname"
@@ -125,7 +242,7 @@ if (!user.admin) {
             placeholder="Nickname"
             onChange={handleChange}
             required
-            style={{ padding: 8, flex: '1', backgroundColor: '#2b2b2b', color: '#fff', border: '1px solid #555' }}
+            style={styles.input}
           />
           <input
             type="number"
@@ -134,9 +251,20 @@ if (!user.admin) {
             onChange={handleChange}
             placeholder="Saldo"
             required
-            style={{ padding: 8, width: 120, backgroundColor: '#2b2b2b', color: '#fff', border: '1px solid #555' }}
+            style={{ ...styles.input, width: 120 }}
           />
-          <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <input
+            type="number"
+            name="threads"
+            value={form.threads}
+            onChange={handleChange}
+            placeholder="Threads"
+            min="1"
+            max="10"
+            required
+            style={{ ...styles.input, width: 120 }}
+          />
+          <label style={styles.checkboxLabel}>
             <input
               type="checkbox"
               name="admin"
@@ -145,25 +273,43 @@ if (!user.admin) {
             />
             Admin
           </label>
-          <button type="submit" style={{ padding: '8px 16px', backgroundColor: '#4CAF50', color: '#fff', border: 'none', borderRadius: 4 }}>Criar</button>
+          <button type="submit" style={styles.createButton}>
+            Criar
+          </button>
         </form>
       </section>
 
-      <section style={{ marginBottom: 32 }}>
+      <section style={styles.section}>
         <h3>🔍 Buscar Usuário</h3>
-        <input
-          type="text"
-          value={searchNickname}
-          onChange={(e) => setSearchNickname(e.target.value)}
-          placeholder="Digite o apelido"
-          style={{ padding: 8, marginRight: 8, backgroundColor: '#2b2b2b', color: '#fff', border: '1px solid #555' }}
-        />
-        <button onClick={handleSearch} style={{ padding: '8px 16px', backgroundColor: 'orange', color: '#000', border: 'none', borderRadius: 4 }}>Buscar</button>
+        <div style={styles.searchContainer}>
+          <input
+            type="text"
+            value={searchNickname}
+            onChange={(e) => setSearchNickname(e.target.value)}
+            placeholder="Digite o apelido"
+            style={styles.input}
+          />
+          <button
+            onClick={() => fetchUsers(searchNickname)}
+            style={styles.searchButton}
+          >
+            Buscar
+          </button>
+          <button
+            onClick={() => {
+              setSearchNickname("");
+              fetchUsers();
+            }}
+            style={styles.resetButton}
+          >
+            Resetar
+          </button>
+        </div>
       </section>
 
-      <section style={{ marginBottom: 32 }}>
+      <section style={styles.section}>
         <h3>💰 Adicionar Saldo</h3>
-        <form onSubmit={handleAddBalance} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <form onSubmit={handleAddBalance} style={styles.form}>
           <input
             type="text"
             name="targetToken"
@@ -171,7 +317,7 @@ if (!user.admin) {
             placeholder="Token do usuário"
             onChange={(e) => setBalanceForm({ ...balanceForm, targetToken: e.target.value })}
             required
-            style={{ padding: 8, flex: '1', backgroundColor: '#2b2b2b', color: '#fff', border: '1px solid #555' }}
+            style={styles.input}
           />
           <input
             type="number"
@@ -180,52 +326,213 @@ if (!user.admin) {
             onChange={(e) => setBalanceForm({ ...balanceForm, amount: Number(e.target.value) })}
             placeholder="Valor"
             required
-            style={{ padding: 8, width: 120, backgroundColor: '#2b2b2b', color: '#fff', border: '1px solid #555' }}
+            style={{ ...styles.input, width: 120 }}
           />
-          <button type="submit" style={{ padding: '8px 16px', backgroundColor: '#2196F3', color: '#fff', border: 'none', borderRadius: 4 }}>Adicionar</button>
+          <button type="submit" style={styles.balanceButton}>
+            Adicionar
+          </button>
+        </form>
+      </section>
+
+      <section style={styles.section}>
+        <h3>🧵 Gerenciar Threads</h3>
+        <form onSubmit={handleUpdateThreads} style={styles.form}>
+          <input
+            type="text"
+            name="targetToken"
+            value={threadsForm.targetToken}
+            placeholder="Token do usuário"
+            onChange={(e) => setThreadsForm({ ...threadsForm, targetToken: e.target.value })}
+            required
+            style={styles.input}
+          />
+          <input
+            type="number"
+            name="threads"
+            value={threadsForm.threads}
+            onChange={(e) => setThreadsForm({ ...threadsForm, threads: Number(e.target.value) })}
+            placeholder="Threads"
+            min="1"
+            max="10"
+            required
+            style={{ ...styles.input, width: 120 }}
+          />
+          <button type="submit" style={styles.threadsButton}>
+            Atualizar
+          </button>
         </form>
       </section>
 
       {message && (
-        <p style={{ color: messageType === 'success' ? 'limegreen' : 'red', fontWeight: 'bold' }}>{message}</p>
+        <p
+          style={{
+            color: messageType === "success" ? "limegreen" : "red",
+            fontWeight: "bold",
+            margin: "16px 0",
+          }}
+        >
+          {message}
+        </p>
       )}
 
       <h3>📋 Lista de Usuários</h3>
       {loading ? (
         <p>Carregando...</p>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 20, backgroundColor: '#181818' }}>
-          <thead>
-            <tr style={{ backgroundColor: '#1f1f1f' }}>
-              <th style={{ padding: 10, border: '1px solid #333' }}>Nickname</th>
-              <th style={{ padding: 10, border: '1px solid #333' }}>Saldo</th>
-              <th style={{ padding: 10, border: '1px solid #333' }}>Admin</th>
-              <th style={{ padding: 10, border: '1px solid #333' }}>Token</th>
-              <th style={{ padding: 10, border: '1px solid #333' }}>Ações</th>
-            </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u._id}>
-                <td style={{ padding: 8, border: '1px solid #333' }}>{u.nickname}</td>
-                <td style={{ padding: 8, border: '1px solid #333' }}>{u.balance}</td>
-                <td style={{ padding: 8, border: '1px solid #333' }}>{u.admin ? "Sim" : "Não"}</td>
-                <td style={{ padding: 8, border: '1px solid #333', fontSize: 12 }}>{u.token}</td>
-                <td style={{ padding: 8, border: '1px solid #333' }}>
-                  <button
-                    onClick={() => handleDeleteUser(u.token)}
-                    style={{ padding: '6px 12px', backgroundColor: '#f44336', color: '#fff', border: 'none', borderRadius: 4 }}
-                  >
-                    Deletar
-                  </button>
-                </td>
+        <div style={styles.tableContainer}>
+          <table style={styles.table}>
+            <thead>
+              <tr style={styles.tableHeader}>
+                <th style={styles.th}>Nickname</th>
+                <th style={styles.th}>Saldo</th>
+                <th style={styles.th}>Threads</th>
+                <th style={styles.th}>Admin</th>
+                <th style={styles.th}>Token</th>
+                <th style={styles.th}>Ações</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {users.map((u) => (
+                <tr key={u._id}>
+                  <td style={styles.td}>{u.nickname}</td>
+                  <td style={styles.td}>{u.balance}</td>
+                  <td style={styles.td}>{u.threads}</td>
+                  <td style={styles.td}>{u.admin ? "✅" : "❌"}</td>
+                  <td style={{ ...styles.td, fontSize: 12 }}>{u.token}</td>
+                  <td style={styles.td}>
+                    <button
+                      onClick={() => handleDeleteUser(u.token)}
+                      style={styles.deleteButton}
+                    >
+                      Deletar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
+};
+
+// Estilos
+const styles = {
+  container: {
+    padding: 24,
+    fontFamily: "Arial, sans-serif",
+    background: "linear-gradient(to right, #000000, #1a1a1a, #000000)",
+    color: "rgb(190, 237, 245)",
+    minHeight: "100vh",
+  },
+  title: {
+    marginBottom: 24,
+    fontSize: "1.8rem",
+    borderBottom: "1px solid #444",
+    paddingBottom: 8,
+  },
+  section: {
+    marginBottom: 32,
+    backgroundColor: "#1a1a1a",
+    padding: 16,
+    borderRadius: 8,
+    boxShadow: "0 2px 4px rgba(0,0,0,0.3)",
+  },
+  form: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+    alignItems: "center",
+  },
+  input: {
+    padding: 8,
+    backgroundColor: "#2b2b2b",
+    color: "#fff",
+    border: "1px solid #555",
+    borderRadius: 4,
+    minWidth: 200,
+  },
+  checkboxLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: 8,
+    marginRight: 12,
+  },
+  createButton: {
+    padding: "8px 16px",
+    backgroundColor: "#4CAF50",
+    color: "#fff",
+    border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+  },
+  searchContainer: {
+    display: "flex",
+    gap: 8,
+    alignItems: "center",
+  },
+  searchButton: {
+    padding: "8px 16px",
+    backgroundColor: "orange",
+    color: "#000",
+    border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+  },
+  resetButton: {
+    padding: "8px 16px",
+    backgroundColor: "#666",
+    color: "#fff",
+    border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+  },
+  balanceButton: {
+    padding: "8px 16px",
+    backgroundColor: "#2196F3",
+    color: "#fff",
+    border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+  },
+  threadsButton: {
+    padding: "8px 16px",
+    backgroundColor: "#9C27B0",
+    color: "#fff",
+    border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+  },
+  tableContainer: {
+    overflowX: "auto",
+    marginTop: 20,
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    backgroundColor: "#181818",
+  },
+  tableHeader: {
+    backgroundColor: "#1f1f1f",
+  },
+  th: {
+    padding: 12,
+    border: "1px solid #333",
+    textAlign: "left",
+  },
+  td: {
+    padding: 10,
+    border: "1px solid #333",
+  },
+  deleteButton: {
+    padding: "6px 12px",
+    backgroundColor: "#f44336",
+    color: "#fff",
+    border: "none",
+    borderRadius: 4,
+    cursor: "pointer",
+  },
 };
 
 export default AdminPanel;

@@ -28,7 +28,6 @@ exports.create = (req, res) => {
       });
     });
 };
-
 exports.findUser = (req, res) => {
   if (!req.body.token) {
     res.status(400).send({ message: "Content can not be empty!" });
@@ -46,8 +45,6 @@ exports.findUser = (req, res) => {
     })
     .catch((err) => console.error("Erro ao encontrar o usuário:", err));
 };
-
-
 exports.seed = (req, res) => {
   let token = functions.newToken(32);
 
@@ -69,7 +66,6 @@ exports.seed = (req, res) => {
       });
     });
 };
-
 exports.getUser = (req, res) => {
   if (!req.user) {
     res.status(400).send({ message: "Content can not be empty!" });
@@ -85,4 +81,29 @@ exports.getUser = (req, res) => {
       }
     })
     .catch((err) => console.error("Erro ao encontrar o usuário:", err));
+};
+exports.updateThreads = async (req, res) => {
+  try {
+    // Verifica se é admin OU se está atualizando seu próprio perfil
+    const isSelfUpdate = req.user.token === req.body.token;
+    
+    if (!req.user.admin && !isSelfUpdate) {
+      return res.status(403).send({ message: "Acesso negado" });
+    }
+
+    const updatedUser = await Users.findOneAndUpdate(
+      { token: req.body.token || req.user.token }, // Permite admin atualizar outros usuários
+      { threads: req.body.threads },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).send({ message: "Usuário não encontrado" });
+    }
+
+    res.status(200).send(updatedUser);
+  } catch (err) {
+    console.error("Erro ao atualizar threads:", err);
+    res.status(500).send({ message: "Erro ao atualizar threads" });
+  }
 };

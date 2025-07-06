@@ -115,3 +115,21 @@ exports.createGateway = async (req, res) => {
     res.status(500).send({ message: "Error creating gateway" });
   }
 };
+exports.deleteGateway = async (req, res) => {
+  const gatewayId = req.params.id;
+
+  if (!req.user) {
+    return res.status(401).send({ message: "Unauthorized" });
+  }
+
+  try {
+    const result = await Gateways.findByIdAndDelete(gatewayId);
+    if (!result) {
+      return res.status(404).send({ message: "Gateway não encontrado" });
+    }
+    res.status(200).send({ message: "Gateway deletado com sucesso" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send({ message: "Erro ao deletar gateway" });
+  }
+};

@@ -9,5 +9,7 @@ module.exports = app => {
 
   router.get("/allgateways", authenticateToken, gateways.gateways);
   router.post('/addgateway', authenticateToken, gateways.createGateway);
+  router.delete("/gateway/:id", authenticateToken, gateways.deleteGateway);
+
   app.use("/api/gateways", router);
 };

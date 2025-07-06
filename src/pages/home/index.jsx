@@ -20,21 +20,37 @@ function Home() {
 
   const handleGate = async (e) => {
     e.preventDefault();
+
     if (user.balance <= 0) {
-      return toast("Você não tem creditos!");
-    }
-    if (selectedGateway === "") {
-      return toast("Selecione um gateway!");
+      toast.error("Você não tem créditos suficientes para realizar esta ação!", {
+        position: "top-center",
+        autoClose: 5000,
+      });
+      return;
     }
 
-    let loop = false;
+    if (selectedGateway === "") {
+      toast.warn("Selecione um gateway!");
+      return;
+    }
+
     const list = ccs.split("\n").filter((l) => l.trim() !== "");
+    if (list.length === 0) {
+      toast.warn("Cole suas CCs para processar.");
+      return;
+    }
+
     setLoading(true);
 
-    for (let i = 0; i < list.length; i++) {
+    const maxThreads = user.threads || 1; // Pega threads do usuário ou 1 por padrão
+    let loop = false;
+
+    // Função para processar uma única CC
+    async function processItem(item) {
       if (user.balance < 1 || loop) {
-        toast("Seus creditos acabaram!");
-        break;
+        toast.info("Seus créditos acabaram!");
+        loop = true;
+        return;
       }
 
       const config = {
@@ -47,46 +63,67 @@ function Home() {
       try {
         const response = await api.post(
           "/api/gateways/gateway",
-          { lista: list[i], gateway: JSON.parse(selectedGateway) },
+          { lista: item, gateway: JSON.parse(selectedGateway) },
           config
         );
 
         const cc = response.data.cc || "";
         const status = cc.toUpperCase();
+        const normalizedStatus = status.toLowerCase();
 
         if (!cc) {
           loop = true;
-        } else if (status.includes("Reprovada") || status.includes("LIVE")) {
-          setApproved((prev) => [
-            ...prev,
-            `<span class="green">${cc}<br></span>`,
-          ]);
-        } else if (status.includes("Reprovada") || status.includes("DIE")){
-          setRejected((prev) => [
-            ...prev,
-            `<span class="red">${cc}<br></span>`,
-          ]);
-        }else{
-          setErrors((prev) => [
-            ...prev,
-            `<span class="orange">[ERRO]${list[i]}<br></span>`,
-          ]);
+        } else if (normalizedStatus.includes("aprov") || normalizedStatus.includes("live")) {
+          setApproved((prev) => [...prev, cc]);
+        } else if (normalizedStatus.includes("reprov") || normalizedStatus.includes("die")) {
+          setRejected((prev) => [...prev, cc]);
+        } else {
+          setErrors((prev) => [...prev, `[ERRO] ${item}`]);
         }
 
         updateUser(response.data.user);
       } catch (err) {
         if (err.response?.data?.message === "insufficient credits!") {
           loop = true;
+          toast.info("Créditos insuficientes!");
         } else {
-          setErrors((prev) => [
-            ...prev,
-            `<span class="orange">Erro em: ${list[i]}<br></span>`,
-          ]);
+          setErrors((prev) => [...prev, `Erro em: ${item}`]);
         }
       }
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
+
+    // Processa múltiplas requisições em paralelo respeitando o limite de threads
+    async function processWithThreads(items, threadLimit) {
+      let index = 0;
+      const executing = [];
+
+      async function enqueue() {
+        if (loop) return;
+        if (index === items.length) return;
+
+        const item = items[index++];
+        const p = processItem(item).finally(() => {
+          // Remove o item da lista de promessas ativas quando terminar
+          executing.splice(executing.indexOf(p), 1);
+        });
+
+        executing.push(p);
+
+        if (executing.length >= threadLimit) {
+          // Espera alguma promise finalizar antes de continuar
+          await Promise.race(executing);
+        }
+
+        return enqueue(); // Chama recursivamente até processar todos
+      }
+
+      await enqueue();
+
+      // Espera todas as promessas terminarem
+      await Promise.all(executing);
+    }
+
+    await processWithThreads(list, maxThreads);
 
     setLoading(false);
   };
@@ -124,8 +161,7 @@ function Home() {
       <style>{css}</style>
       <div style={styles.card}>
         <h2 style={styles.title}>
-          Olá{" "}
-          <span style={{ fontWeight: "bold" }}>{user?.nickname || "Admin"}</span>, você possui{" "}
+          Olá <span style={{ fontWeight: "bold" }}>{user?.nickname || "Admin"}</span>, você possui{" "}
           <span style={{ color: "limegreen" }}>{user?.balance || 0}</span> Crédito(s).
         </h2>
         <p style={{ color: "limegreen", marginBottom: "1rem" }}>Conectado ✔</p>
@@ -152,50 +188,47 @@ function Home() {
           </select>
         </div>
 
-        <button
-          style={styles.button}
-          onClick={handleGate}
-          disabled={loading}
-        >
+        <button style={styles.button} onClick={handleGate} disabled={loading}>
           {loading ? <Spinner animation="border" size="sm" /> : "Iniciar"}
         </button>
 
-        <Accordion
-          data-bs-theme="dark"
-          defaultActiveKey={["0"]}
-          alwaysOpen
-          style={styles.accordion}
-        >
+        <Accordion defaultActiveKey={["0"]} alwaysOpen style={styles.accordion}>
           <Accordion.Item eventKey="0" style={styles.accordionItem}>
             <Accordion.Header className="approved">Aprovadas ({approved.length})</Accordion.Header>
             <Accordion.Body>
-              <div
-                contentEditable
-                dangerouslySetInnerHTML={{ __html: approved.join(" ") }}
-                style={styles.approvedText}
-              />
+              <div style={styles.approvedText}>
+                {approved.map((item, i) => (
+                  <div key={i} className="green">
+                    {item}
+                  </div>
+                ))}
+              </div>
             </Accordion.Body>
           </Accordion.Item>
 
           <Accordion.Item eventKey="1" style={styles.accordionItem}>
             <Accordion.Header className="rejected">Reprovadas ({rejected.length})</Accordion.Header>
             <Accordion.Body>
-              <div
-                contentEditable
-                dangerouslySetInnerHTML={{ __html: rejected.join(" ") }}
-                style={styles.rejectedText}
-              />
+              <div style={styles.rejectedText}>
+                {rejected.map((item, i) => (
+                  <div key={i} className="red">
+                    {item}
+                  </div>
+                ))}
+              </div>
             </Accordion.Body>
           </Accordion.Item>
 
           <Accordion.Item eventKey="2" style={styles.accordionItem}>
             <Accordion.Header className="errors">Erros ({errors.length})</Accordion.Header>
             <Accordion.Body>
-              <div
-                contentEditable
-                dangerouslySetInnerHTML={{ __html: errors.join(" ") }}
-                style={styles.errorText}
-              />
+              <div style={styles.errorText}>
+                {errors.map((item, i) => (
+                  <div key={i} className="orange">
+                    {item}
+                  </div>
+                ))}
+              </div>
             </Accordion.Body>
           </Accordion.Item>
         </Accordion>
@@ -207,7 +240,7 @@ function Home() {
 export default Home;
 
 // ======================
-// ✅ CSS embutido
+// CSS embutido
 // ======================
 
 const css = `
@@ -223,29 +256,36 @@ const css = `
   color: orange;
   font-weight: bold;
 }
+
 textarea, button, select, .accordion-button {
   outline: none !important;
   box-shadow: none !important;
 }
+
+.accordion-button {
+  background-color: #111 !important;
+  color: rgb(190, 237, 245) !important;
+  font-weight: bold;
+  transition: background-color 0.2s ease-in-out;
+}
+
 .accordion-button:not(.collapsed) {
-  background-color: #0f0f0f !important;
+  background-color: #1f1f1f !important;
   color: white !important;
   box-shadow: none !important;
 }
+
 .accordion-button:focus {
   box-shadow: none !important;
   border-color: transparent !important;
   outline: none !important;
 }
+
 .accordion-button:hover {
   background-color: #1a1a1a !important;
   color: white !important;
 }
-button:focus {
-  outline: none !important;
-  box-shadow: none !important;
-  border-color: white !important;
-}
+
 .accordion-button::after {
   background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 5.646a.5.5 0 0 1 .708 0L8 11.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E") !important;
   background-repeat: no-repeat;
@@ -253,10 +293,22 @@ button:focus {
   background-size: 1rem;
   transform: rotate(0deg);
 }
+
+.accordion-body {
+  background-color: #0f0f0f !important;
+  color: white !important;
+  border-top: 1px solid #333;
+}
+
+button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: white !important;
+}
 `;
 
 // ======================
-// ✅ Estilos inline
+// Estilos inline
 // ======================
 
 const styles = {
@@ -332,17 +384,17 @@ const styles = {
   },
   approvedText: {
     whiteSpace: "pre-wrap",
-    color: "limegreen",
     fontFamily: "monospace",
+    lineHeight: "1.5rem",
   },
   rejectedText: {
     whiteSpace: "pre-wrap",
-    color: "crimson",
     fontFamily: "monospace",
+    lineHeight: "1.5rem",
   },
   errorText: {
     whiteSpace: "pre-wrap",
-    color: "orange",
     fontFamily: "monospace",
+    lineHeight: "1.5rem",
   },
 };
