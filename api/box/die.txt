@@ -3679,3 +3679,44 @@ Stack trace:
 [DIE] 4984070001076723|10|2028|907 » () Autorizacao Negada -> R$ 10,43
 [DIE] 4984070001076723|10|2028|907 » () Autorizacao Negada -> R$ 11,58
 [DIE] 4984070001076723|10|2028|907 » () Autorizacao Negada -> R$ 18,71
+Erro - 4107496215714407|11|2027|806 - Erro interno
+Reprovada - 4576010007013704|11|2027|886 - Autorização Negada -> R$ 7,84
+Reprovada - 5552700133317145|08|2027|729 - Transação não autorizada. Entre em contato com o seu banco.
+Erro - 5228400109672102|02|2026|184 - Erro interno
+Erro - 4107496215714407|11|2027|806 - Erro interno
+Erro - 4576010007013704|11|2027|886 - Erro interno
+Erro - 5552700133317145|08|2027|729 - Erro interno
+Erro - 5228400109672102|02|2026|184 - Erro interno
+Reprovada - 4346396850092013|09|2027|513 - Autorização Negada -> R$ 11,71
+Reprovada - 4346397436282011|11|2027|566 - Autorização Negada -> R$ 5,62
+Erro - 4040247405527491|01|2028|729 - Erro interno
+Reprovada - 4078380017122602|11|2026|810 - Autorização Negada -> R$ 14,32
+Erro - 4078690007803866|11|2027|669 - Erro interno
+Erro - 4305350059965148|05|2030|798 - Erro interno
+Erro - 4040240800378388|01|2028|382 - Erro interno
+Reprovada - 4346396850092013|09|2027|513 - Autorização Negada -> R$ 12,19
+Reprovada - 4346397436282011|11|2027|566 - Autorização Negada -> R$ 12,87
+Erro - 4040247405527491|01|2028|729 - Erro interno
+Erro - 4078380017122602|11|2026|810 - Erro interno
+Erro - 4078690007803866|11|2027|669 - Erro interno
+Erro - 4305350059965148|05|2030|798 - Erro interno
+Erro - 4040240800378388|01|2028|382 - Erro interno
+Erro - 4346396850092013|09|2027|513 - Erro interno
+Erro - 4346397436282011|11|2027|566 - Erro interno
+Erro - 4040247405527491|01|2028|729 - Erro interno
+Erro - 4078380017122602|11|2026|810 - Erro interno
+Erro - 4078690007803866|11|2027|669 - Erro interno
+Erro - 4305350059965148|05|2030|798 - Erro interno
+Erro - 4040240800378388|01|2028|382 - Erro interno
+Erro - 4107496215714407|11|2027|806 - Erro interno
+Erro - 4576010007013704|11|2027|886 - Erro interno
+Erro - 5552700133317145|08|2027|729 - Erro interno
+Erro - 5228400109672102|02|2026|184 - Erro interno
+Reprovada - 5552700131883007|04|2028|678 - Transação não autorizada. Entre em contato com o seu banco.
+Reprovada - 5409055742152010|12|2027|950 - Transação não autorizada. Entre em contato com o seu banco.
+Reprovada - 5115880307880209|02|2029|415 - Transação não autorizada. Entre em contato com o seu banco.
+Reprovada - 5552700127548085|05|2027|601 - Transação não autorizada. Entre em contato com o seu banco.
+Erro - 4064410004546434|12|2026|934 - Erro interno
+Reprovada - 5115884688229838|02|2029|302 - Transação não autorizada. Entre em contato com o seu banco.
+Reprovada - 4064410005558859|10|2027|253 - Transação não autorizada. Limite excedido/sem saldo.
+Erro - 5529430577043482|02|2028|361 - Erro interno
