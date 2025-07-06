@@ -50,7 +50,7 @@ const adminRoutes = require("./src/routes/admin.routes");
 app.use("/api/admin", adminRoutes);
 
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8081;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}.`);
 });
