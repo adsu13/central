@@ -2,8 +2,11 @@
 import React, { useEffect, useState } from "react";
 import api from "@src/services/api";
 import { useUser } from "@src/context/userContext";
+import { useNavigate } from "react-router-dom";
 
 const AdminPanel = () => {
+  const navigate = useNavigate();
+
   const { token, user } = useUser();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -87,7 +90,18 @@ const AdminPanel = () => {
     fetchUsers(searchNickname);
   };
 
-  if (!token || !user?.admin) return <p style={{ color: 'red', padding: 24 }}>Você não tem permissão para acessar esta página.</p>;
+ if (!token) {
+  return null; // ou redirecione para login
+}
+
+if (!user) {
+  return null; // espera o user carregar
+}
+
+if (!user.admin) {
+  navigate("/", { replace: true });
+  return null;
+}
 
   return (
     <div
