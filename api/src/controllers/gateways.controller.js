@@ -27,24 +27,17 @@ exports.gateways = (req, res) => {
     }
   });
 };
-
 exports.gateway = async (req, res) => {
   if (!req.user) {
     return res.status(400).send({ message: "Content can not be empty!" });
   }
-
   if (!req.body.gateway || !req.body.lista) {
     return res.status(400).send({ message: "Content can not be empty!" });
   }
-
   try {
     const response = await api.get(`${req.body.gateway.route}?lista=${req.body.lista}`);
-    console.log("Resposta da API:", response.data);
-
     const data = response.data;
     let card;
-
-    // Construir a string visível do cartão
     if (typeof data === "object" && data.cartao && data.mensagem) {
       card = `${data.status || "?"} - ${data.cartao} - ${data.mensagem}`;
     } else if (typeof data === "string") {
@@ -55,18 +48,13 @@ exports.gateway = async (req, res) => {
         raw: response.data
       });
     }
-
     const user = await Users.findOne({ token: req.user.token });
-
     if (!user) {
       return res.status(404).send({ message: "User not found" });
     }
-
     let bin;
-
     const isLive = card.includes("LIVE") || data.status === "LIVE" || data.status === "Aprovada";
     const isApproved = card.includes("Aprovada") || data.status === "Aprovada";
-
     if (isLive) {
       bin = functions.BinCheck(card.slice(10, 16));
       card = card.replace("SecurityChecker", `${bin} by SecurityChecker`);
@@ -76,18 +64,14 @@ exports.gateway = async (req, res) => {
       card = card.replace("SecurityChecker", `${bin} by SecurityChecker`);
       await functions.Box(card, "die");
     }
-
     if (user.balance < Config.payment) {
       return res.status(400).send({ message: "insufficient credits!" });
     }
-
     if (isApproved) {
       user.balance -= 1;
       await user.save();
     }
-
     return res.send({ user, cc: card });
-
   } catch (error) {
     console.error("Erro ao consultar gateway:", error);
     return res.status(500).send({ message: "Erro ao consultar gateway" });
@@ -97,11 +81,9 @@ exports.createGateway = async (req, res) => {
   if (!req.user) {
     return res.status(401).send({ message: "Unauthorized" });
   }
-
   if (!req.body.gateway || !req.body.route) {
     return res.status(400).send({ message: "Gateway and route are required" });
   }
-
   try {
     const newGateway = new Gateways({
       gateway: req.body.gateway,
