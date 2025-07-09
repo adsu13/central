@@ -1,26 +1,21 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import { useUser } from "@src/context/userContext";
-
 import Form from "react-bootstrap/Form";
 import InputGroup from "react-bootstrap/InputGroup";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import { toast } from "react-toastify";
-
 import api from "@src/services/api";
 import { MdOutlineKey } from "react-icons/md";
 import { CiLogin } from "react-icons/ci";
 import { GlobalStyle } from "../../styles/globalStyles";
 import { Container } from "./styles";
-
 function Login() {
   const [loginToken, setLoginToken] = useState("");
   const [isLoading, setLoading] = useState(false);
   const { saveToken, token } = useUser();
   const navigate = useNavigate();
-
   const handleSumit = (e) => {
     e.preventDefault();
     setLoading(true);
@@ -35,7 +30,6 @@ function Login() {
       }, 1000);
       return;
     }
-
     api
       .post("/api/users/login", { token: loginToken })
       .then((response) => {
@@ -49,18 +43,14 @@ function Login() {
         }, 1000);
       });
   };
-
   useEffect(() => {
     if (token) navigate("/");
   }, [token, isLoading]);
-
   return (
-
     <Container>
       <GlobalStyle></GlobalStyle>
       <img src="./logo.png" alt="logo" />
       <Form data-bs-theme="dark" className="container" onSubmit={handleSumit}>
-        
         <InputGroup className="mb-3 mw1">
           <InputGroup.Text id="basic-addon1">
             <MdOutlineKey />
@@ -91,5 +81,4 @@ function Login() {
     </Container>
   );
 }
-
 export default Login;

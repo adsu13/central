@@ -2,12 +2,9 @@ import React, { useEffect, useState } from "react";
 import api from "@src/services/api";
 import { useUser } from "@src/context/userContext";
 import { useNavigate } from "react-router-dom";
-
 const AdminPanel = () => {
   const navigate = useNavigate();
   const { token, user } = useUser();
-
-  // Estados
   const [users, setUsers] = useState([]);
   const [gateways, setGateways] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,15 +29,11 @@ const AdminPanel = () => {
   });
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("success");
-
-  // Redireciona se não for admin
   useEffect(() => {
     if (token && user && !user.admin) {
       navigate("/", { replace: true });
     }
   }, [token, user, navigate]);
-
-  // Busca usuários e gateways
   const fetchUsers = async (nickname = "") => {
     try {
       const res = await api.get("/api/admin/list-users", {
@@ -53,7 +46,6 @@ const AdminPanel = () => {
       setLoading(false);
     }
   };
-
   const fetchGateways = async () => {
     try {
       const res = await api.get("/api/gateways/allgateways");
@@ -71,8 +63,6 @@ const AdminPanel = () => {
   }, [token]);
 
   if (!token || !user) return null;
-
-  // Handlers
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm(prev => ({
@@ -80,7 +70,6 @@ const AdminPanel = () => {
       [name]: type === "checkbox" ? checked : value,
     }));
   };
-
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
@@ -94,7 +83,6 @@ const AdminPanel = () => {
       setMessageType("error");
     }
   };
-
   const handleAddBalance = async (e) => {
     e.preventDefault();
     try {
@@ -108,7 +96,6 @@ const AdminPanel = () => {
       setMessageType("error");
     }
   };
-
   const handleUpdateThreads = async (e) => {
     e.preventDefault();
     try {
@@ -125,7 +112,6 @@ const AdminPanel = () => {
       setMessageType("error");
     }
   };
-
   const handleCreateGateway = async (e) => {
     e.preventDefault();
     try {
@@ -139,7 +125,6 @@ const AdminPanel = () => {
       setMessageType("error");
     }
   };
-
   const handleDeleteUser = async (tokenToDelete) => {
     if (!window.confirm("Tem certeza que deseja deletar este usuário?")) return;
     try {
@@ -152,7 +137,6 @@ const AdminPanel = () => {
       setMessageType("error");
     }
   };
-
   const handleDeleteGateway = async (gatewayId) => {
     if (!window.confirm("Tem certeza que deseja deletar este gateway?")) return;
     try {
@@ -165,12 +149,9 @@ const AdminPanel = () => {
       setMessageType("error");
     }
   };
-
   return (
     <div style={styles.container}>
       <h2 style={styles.title}>🛠️ Painel de Administração</h2>
-
-      {/* Seção de Gateways */}
       <section style={styles.section}>
         <h3>📡 Gerenciar Gateways</h3>
         <form onSubmit={handleCreateGateway} style={styles.form}>
@@ -196,7 +177,6 @@ const AdminPanel = () => {
             Criar Gateway
           </button>
         </form>
-
         <div style={{ marginTop: 20 }}>
           <h4>Gateways Existentes</h4>
           {gateways.length > 0 ? (
@@ -230,8 +210,6 @@ const AdminPanel = () => {
           )}
         </div>
       </section>
-
-      {/* Seção de Usuários */}
       <section style={styles.section}>
         <h3>👤 Criar Novo Usuário</h3>
         <form onSubmit={handleCreateUser} style={styles.form}>
@@ -333,7 +311,6 @@ const AdminPanel = () => {
           </button>
         </form>
       </section>
-
       <section style={styles.section}>
         <h3>🧵 Gerenciar Threads</h3>
         <form onSubmit={handleUpdateThreads} style={styles.form}>
@@ -362,7 +339,6 @@ const AdminPanel = () => {
           </button>
         </form>
       </section>
-
       {message && (
         <p
           style={{
@@ -374,7 +350,6 @@ const AdminPanel = () => {
           {message}
         </p>
       )}
-
       <h3>📋 Lista de Usuários</h3>
       {loading ? (
         <p>Carregando...</p>
@@ -416,8 +391,6 @@ const AdminPanel = () => {
     </div>
   );
 };
-
-// Estilos
 const styles = {
   container: {
     padding: 24,
@@ -534,5 +507,4 @@ const styles = {
     cursor: "pointer",
   },
 };
-
 export default AdminPanel;

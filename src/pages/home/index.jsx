@@ -5,7 +5,8 @@ import api from "@src/services/api";
 import { useUser } from "../../context/userContext";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-
+import { FaRegCopy } from "react-icons/fa";
+import "react-toastify/dist/ReactToastify.css";
 function Home() {
   const { user, token, updateUser, updateToken } = useUser();
   const navigate = useNavigate();
@@ -14,24 +15,17 @@ function Home() {
   const [ccs, setCcs] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const shouldStopRef = useRef(false);
-
   const [approved, setApproved] = useState([]);
   const [rejected, setRejected] = useState([]);
   const [errors, setErrors] = useState([]);
-
   const handleStartStop = async (e) => {
     e.preventDefault();
-
     if (isRunning) {
-      // Se estiver rodando, para o processo
       shouldStopRef.current = true;
       setIsRunning(false);
       return;
     }
-
-    // Se não estiver rodando, inicia o processo
     shouldStopRef.current = false;
-    
     if (user.balance <= 0) {
       toast.error("Você não tem créditos suficientes para realizar esta ação!", {
         position: "top-center",
@@ -39,28 +33,20 @@ function Home() {
       });
       return;
     }
-
     if (selectedGateway === "") {
       toast.warn("Selecione um gateway!");
       return;
     }
-
     const list = ccs.split("\n").filter((l) => l.trim() !== "");
     if (list.length === 0) {
       toast.warn("Cole suas CCs para processar.");
       return;
     }
-
-    // Limpa os dados anteriores
     setApproved([]);
     setRejected([]);
     setErrors([]);
-    
     setIsRunning(true);
-
     const maxThreads = user.threads || 1;
-
-    // Função para processar uma única CC
     async function processItem(item) {
       if (user.balance < 1 || shouldStopRef.current) {
         if (shouldStopRef.current) {
@@ -71,25 +57,21 @@ function Home() {
         shouldStopRef.current = true;
         return;
       }
-
       const config = {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       };
-
       try {
         const response = await api.post(
           "/api/gateways/gateway",
           { lista: item, gateway: JSON.parse(selectedGateway) },
           config
         );
-
         const cc = response.data.cc || "";
         const status = cc.toUpperCase();
         const normalizedStatus = status.toLowerCase();
-
         if (!cc) {
           shouldStopRef.current = true;
         } else if (normalizedStatus.includes("aprov") || normalizedStatus.includes("live")) {
@@ -99,7 +81,6 @@ function Home() {
         } else {
           setErrors((prev) => [...prev, `[ERRO] ${item}`]);
         }
-
         updateUser(response.data.user);
       } catch (err) {
         if (err.response?.data?.message === "insufficient credits!") {
@@ -110,53 +91,39 @@ function Home() {
         }
       }
     }
-
-    // Processa múltiplas requisições em paralelo
     async function processWithThreads(items, threadLimit) {
       let index = 0;
       const executing = [];
-
       async function enqueue() {
         if (shouldStopRef.current) return;
         if (index === items.length) return;
-
         const item = items[index++];
         const p = processItem(item).finally(() => {
           executing.splice(executing.indexOf(p), 1);
         });
-
         executing.push(p);
-
         if (executing.length >= threadLimit) {
           await Promise.race(executing);
         }
-
         return enqueue();
       }
-
       await enqueue();
       await Promise.all(executing);
-      
-      // Quando terminar, atualiza o estado
       setIsRunning(false);
     }
-
     await processWithThreads(list, maxThreads);
   };
-
   useEffect(() => {
     if (!token) {
       navigate("/login");
       return;
     }
-
     const config = {
       headers: {
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
     };
-
     api
       .get("/api/users/user", config)
       .then((res) => updateUser(res.data))
@@ -166,12 +133,36 @@ function Home() {
         updateToken(false);
         navigate("/login");
       });
-
     api.get("/api/gateways/allgateways", config).then((res) => {
       setGateways(res.data);
     });
   }, [user.balance, token, isRunning]);
+  const copyToClipboard = (items, label) => {
+    const text = items.join("\n");
+    navigator.clipboard.writeText(text).then(() => {
+      toast(
+        <div style={{
+          color: "#999999",
+          fontWeight: "bold",
+          textAlign: "center",
+          fontSize: "0.9rem",
+        }}>
+          ✅ {label} copiadas para a área de transferência!
+        </div>,
+        {
+          position: "top-rigth",
+          autoClose: 3000,
+          style: {
+            background: "transparent",
+            boxShadow: "none",
+            padding: 0,
+            margin: 0,
+          }
+        }
+      );
 
+    });
+  };
   return (
     <div style={styles.container}>
       <style>{css}</style>
@@ -188,7 +179,6 @@ function Home() {
           value={ccs}
           onChange={(e) => setCcs(e.target.value)}
         />
-
         <div style={styles.gatewayContainer}>
           <select
             style={styles.select}
@@ -203,10 +193,9 @@ function Home() {
             ))}
           </select>
         </div>
-
-        <button 
-          style={styles.button} 
-          onClick={handleStartStop} 
+        <button
+          style={styles.button}
+          onClick={handleStartStop}
           disabled={isRunning && shouldStopRef.current}
         >
           {isRunning ? (
@@ -221,10 +210,19 @@ function Home() {
             "Iniciar"
           )}
         </button>
-
         <Accordion defaultActiveKey={["0"]} alwaysOpen style={styles.accordion}>
           <Accordion.Item eventKey="0" style={styles.accordionItem}>
-            <Accordion.Header className="approved">Aprovadas ({approved.length})</Accordion.Header>
+            <Accordion.Header className="approved">
+              <span>Aprovadas ({approved.length})</span>
+              <FaRegCopy
+                style={{ cursor: "pointer", marginLeft: "auto" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyToClipboard(approved, "Aprovadas");
+                }}
+                title="Copiar aprovadas"
+              />
+            </Accordion.Header>
             <Accordion.Body>
               <div style={styles.approvedText}>
                 {approved.map((item, i) => (
@@ -235,9 +233,18 @@ function Home() {
               </div>
             </Accordion.Body>
           </Accordion.Item>
-
           <Accordion.Item eventKey="1" style={styles.accordionItem}>
-            <Accordion.Header className="rejected">Reprovadas ({rejected.length})</Accordion.Header>
+            <Accordion.Header className="rejected">
+              <span>Reprovadas ({rejected.length})</span>
+              <FaRegCopy
+                style={{ cursor: "pointer", marginLeft: "auto" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyToClipboard(rejected, "Reprovadas");
+                }}
+                title="Copiar reprovadas"
+              />
+            </Accordion.Header>
             <Accordion.Body>
               <div style={styles.rejectedText}>
                 {rejected.map((item, i) => (
@@ -248,9 +255,18 @@ function Home() {
               </div>
             </Accordion.Body>
           </Accordion.Item>
-
           <Accordion.Item eventKey="2" style={styles.accordionItem}>
-            <Accordion.Header className="errors">Erros ({errors.length})</Accordion.Header>
+            <Accordion.Header className="errors">
+              <span>Erros ({errors.length})</span>
+              <FaRegCopy
+                style={{ cursor: "pointer", marginLeft: "auto" }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyToClipboard(errors, "Erros");
+                }}
+                title="Copiar erros"
+              />
+            </Accordion.Header>
             <Accordion.Body>
               <div style={styles.errorText}>
                 {errors.map((item, i) => (
@@ -266,14 +282,12 @@ function Home() {
     </div>
   );
 }
-
 export default Home;
-
-// ======================
-// CSS embutido
-// ======================
-
 const css = `
+.Toastify__progress-bar {
+  background: white !important;
+}
+
 .green {
   color: limegreen;
   font-weight: bold;
@@ -289,14 +303,18 @@ const css = `
 
 textarea, button, select, .accordion-button {
   outline: none !important;
-  box-shadow: none !important;
+  box-shadow: none !important;  
 }
 
 .accordion-button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   background-color: #111 !important;
-  color: rgb(190, 237, 245) !important;
+  color: #fff !important;
   font-weight: bold;
   transition: background-color 0.2s ease-in-out;
+  border: none !important;
 }
 
 .accordion-button:not(.collapsed) {
@@ -317,11 +335,7 @@ textarea, button, select, .accordion-button {
 }
 
 .accordion-button::after {
-  background-image: url("data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='white' viewBox='0 0 16 16'%3E%3Cpath fill-rule='evenodd' d='M1.646 5.646a.5.5 0 0 1 .708 0L8 11.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3E%3C/svg%3E") !important;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: 1rem;
-  transform: rotate(0deg);
+  display: none !important;
 }
 
 .accordion-body {
