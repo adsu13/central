@@ -9,7 +9,6 @@ router.put('/update-user', authenticateToken, adminController.updateUserByToken)
 router.get('/list-users', authenticateToken, adminController.listAllUsers);
 router.post('/create-users', authenticateToken, adminController.createUser);
 router.delete('/users/:token', authenticateToken, adminController.deleteUser);
-
 router.get("/me", authenticateToken, async (req, res) => {
   try {
     const user = await Users.findOne({ token: req.user.token });
@@ -32,4 +31,4 @@ router.get("/me", authenticateToken, async (req, res) => {
   }
 });
 
-module.exports = router; // Exporta apenas o router
+module.exports = router;
