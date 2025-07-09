@@ -84,7 +84,6 @@ exports.getUser = (req, res) => {
 };
 exports.updateThreads = async (req, res) => {
   try {
-    // Verifica se é admin OU se está atualizando seu próprio perfil
     const isSelfUpdate = req.user.token === req.body.token;
     
     if (!req.user.admin && !isSelfUpdate) {
@@ -92,7 +91,7 @@ exports.updateThreads = async (req, res) => {
     }
 
     const updatedUser = await Users.findOneAndUpdate(
-      { token: req.body.token || req.user.token }, // Permite admin atualizar outros usuários
+      { token: req.body.token || req.user.token },
       { threads: req.body.threads },
       { new: true, runValidators: true }
     );
