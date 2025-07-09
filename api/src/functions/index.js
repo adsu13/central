@@ -14,7 +14,6 @@ exports.loadBins = () => {
   });
 
   leitor.on("line", (linha) => {
-    // Adiciona a linha ao array
     bins.push(linha);
   });
 
