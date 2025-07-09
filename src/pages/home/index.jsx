@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Accordion from "react-bootstrap/Accordion";
 import Spinner from "react-bootstrap/esm/Spinner";
 import api from "@src/services/api";
@@ -12,15 +12,26 @@ function Home() {
   const [gateways, setGateways] = useState([]);
   const [selectedGateway, setSelectedGateway] = useState("");
   const [ccs, setCcs] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isRunning, setIsRunning] = useState(false);
+  const shouldStopRef = useRef(false);
 
   const [approved, setApproved] = useState([]);
   const [rejected, setRejected] = useState([]);
   const [errors, setErrors] = useState([]);
 
-  const handleGate = async (e) => {
+  const handleStartStop = async (e) => {
     e.preventDefault();
 
+    if (isRunning) {
+      // Se estiver rodando, para o processo
+      shouldStopRef.current = true;
+      setIsRunning(false);
+      return;
+    }
+
+    // Se não estiver rodando, inicia o processo
+    shouldStopRef.current = false;
+    
     if (user.balance <= 0) {
       toast.error("Você não tem créditos suficientes para realizar esta ação!", {
         position: "top-center",
@@ -40,16 +51,24 @@ function Home() {
       return;
     }
 
-    setLoading(true);
+    // Limpa os dados anteriores
+    setApproved([]);
+    setRejected([]);
+    setErrors([]);
+    
+    setIsRunning(true);
 
-    const maxThreads = user.threads || 1; // Pega threads do usuário ou 1 por padrão
-    let loop = false;
+    const maxThreads = user.threads || 1;
 
     // Função para processar uma única CC
     async function processItem(item) {
-      if (user.balance < 1 || loop) {
-        toast.info("Seus créditos acabaram!");
-        loop = true;
+      if (user.balance < 1 || shouldStopRef.current) {
+        if (shouldStopRef.current) {
+          toast.info("Processo parado pelo usuário!");
+        } else {
+          toast.info("Seus créditos acabaram!");
+        }
+        shouldStopRef.current = true;
         return;
       }
 
@@ -72,7 +91,7 @@ function Home() {
         const normalizedStatus = status.toLowerCase();
 
         if (!cc) {
-          loop = true;
+          shouldStopRef.current = true;
         } else if (normalizedStatus.includes("aprov") || normalizedStatus.includes("live")) {
           setApproved((prev) => [...prev, cc]);
         } else if (normalizedStatus.includes("reprov") || normalizedStatus.includes("die")) {
@@ -84,7 +103,7 @@ function Home() {
         updateUser(response.data.user);
       } catch (err) {
         if (err.response?.data?.message === "insufficient credits!") {
-          loop = true;
+          shouldStopRef.current = true;
           toast.info("Créditos insuficientes!");
         } else {
           setErrors((prev) => [...prev, `Erro em: ${item}`]);
@@ -92,40 +111,37 @@ function Home() {
       }
     }
 
-    // Processa múltiplas requisições em paralelo respeitando o limite de threads
+    // Processa múltiplas requisições em paralelo
     async function processWithThreads(items, threadLimit) {
       let index = 0;
       const executing = [];
 
       async function enqueue() {
-        if (loop) return;
+        if (shouldStopRef.current) return;
         if (index === items.length) return;
 
         const item = items[index++];
         const p = processItem(item).finally(() => {
-          // Remove o item da lista de promessas ativas quando terminar
           executing.splice(executing.indexOf(p), 1);
         });
 
         executing.push(p);
 
         if (executing.length >= threadLimit) {
-          // Espera alguma promise finalizar antes de continuar
           await Promise.race(executing);
         }
 
-        return enqueue(); // Chama recursivamente até processar todos
+        return enqueue();
       }
 
       await enqueue();
-
-      // Espera todas as promessas terminarem
       await Promise.all(executing);
+      
+      // Quando terminar, atualiza o estado
+      setIsRunning(false);
     }
 
     await processWithThreads(list, maxThreads);
-
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -154,7 +170,7 @@ function Home() {
     api.get("/api/gateways/allgateways", config).then((res) => {
       setGateways(res.data);
     });
-  }, [user.balance, token, loading]);
+  }, [user.balance, token, isRunning]);
 
   return (
     <div style={styles.container}>
@@ -188,8 +204,22 @@ function Home() {
           </select>
         </div>
 
-        <button style={styles.button} onClick={handleGate} disabled={loading}>
-          {loading ? <Spinner animation="border" size="sm" /> : "Iniciar"}
+        <button 
+          style={styles.button} 
+          onClick={handleStartStop} 
+          disabled={isRunning && shouldStopRef.current}
+        >
+          {isRunning ? (
+            shouldStopRef.current ? (
+              "Parando..."
+            ) : (
+              <>
+                <Spinner animation="border" size="sm" /> Parar
+              </>
+            )
+          ) : (
+            "Iniciar"
+          )}
         </button>
 
         <Accordion defaultActiveKey={["0"]} alwaysOpen style={styles.accordion}>
@@ -371,6 +401,10 @@ const styles = {
     padding: "0.5rem",
     borderRadius: "0.5rem",
     cursor: "pointer",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: "0.5rem"
   },
   accordion: {
     marginTop: "1rem",
