@@ -9,7 +9,6 @@ module.exports = (mongoose) => {
     },
     { timestamps: true }
   );
-
   const Gateways = mongoose.model("gateways", schema);
   return Gateways;
 };
